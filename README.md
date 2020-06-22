@@ -20,8 +20,10 @@ truffle test
 ## CLI
 
 Please copy .env.exampe to .env 
+
 OWNER_PRIVATE_KEY is a private key for contract owner account. 
-PRIVATE_KEY 
+
+PRIVATE_KEY is defautl privat ekey for user account
 
 
 
@@ -37,7 +39,7 @@ PRIVATE_KEY
 ```
 ./cli.js setTornado
 ```
-before we start we need to initialize voting comntract to allow Tornado contract to manage votes
+before we start we need to initialize voting comntract to allow Tornado contract managing votes
 
 
 #### Account information
@@ -90,7 +92,7 @@ Option 2 votes        : 0
 
 
 ```
-This sample create voting with thre eoptions, each ballot adds 1 vote to chosen option
+This sample create voting with three options, each ballot adds 1 vote to chosen option
 
 #### addVotes
 
