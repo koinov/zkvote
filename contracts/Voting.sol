@@ -65,15 +65,15 @@ contract Voting is IVoting {
         return true;
     }
 
-    function vote(uint256 votingId, uint256 variant) public returns (bool) {
+    function vote(uint256 votingId, uint256 option) public returns (bool) {
         require(msg.sender == _tornado, "Not Tornado");
-        require(variant < votings[votingId].optionsNumber, "Incorrect variant");
-        votings[votingId].results[variant] = votings[votingId].results[variant].add(votings[votingId].nomination);
+        require(option < votings[votingId].optionsNumber, "Incorrect variant");
+        votings[votingId].results[option] = votings[votingId].results[option].add(votings[votingId].nomination);
         return true;
     }
 
-    function getResult(uint256 votingId, uint256 variant) public view returns (uint256) {
-        return votings[votingId].results[variant];
+    function getResult(uint256 votingId, uint256 option) public view returns (uint256) {
+        return votings[votingId].results[option];
     }
 
     function getVotes(uint256 votingId, address participant) public view returns (uint256) {

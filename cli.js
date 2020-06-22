@@ -51,6 +51,17 @@ async function printERC20Balance({ address, name, tokenAddress }) {
 }
 
 /**
+ * Display accounts information
+ */
+async function getAccounts() {
+  const accounts = await web3.eth.getAccounts()
+  for(let a in accounts){
+    console.log(`Account #${a} Address ${accounts[a]}`);
+  }
+}
+
+
+/**
  * Create deposit object from secret and nullifier
  */
 function createDeposit({ nullifier, secret, votingId }) {
@@ -75,8 +86,9 @@ async function setTornado() {
  * Create voting
  */
 async function createVoting(optionsNumber, nominationValue ) {
-  votingId = await voting.methods.createVoting(optionsNumber, nominationValue).send({ from: senderAccount, gas: 2e6 })
-  console.log("Voting created. ID : ", votingId)
+  votingId = await voting.methods.votingsCounter().call()
+  await voting.methods.createVoting(optionsNumber, nominationValue).send({ from: senderAccount, gas: 2e6 })
+  console.log("Voting created. ID : ", votingId )
 }
 
 /**
@@ -99,7 +111,13 @@ async function getVotingInfo(votingId) {
   console.log('Number of options     :', votingEntry.optionsNumber)
   console.log('Nomination            :', votingEntry.nomination)
   console.log('Total votes           :', votingEntry.totalVotes)
+  console.log('=============Options================')
+  for( let i = 0 ; i < votingEntry.optionsNumber; i ++ ){
+    let r = await voting.methods.getResult(votingId, i).call()
+    console.log(`Option ${i} votes        :`, r)
+  }
   console.log('====================================')
+
 }
 
 
@@ -109,13 +127,13 @@ async function getVotingInfo(votingId) {
  * @param currency Сurrency
  * @param amount Deposit amount
  */
-async function getBallot({ votingId }) {
+async function getBallot({ votingId, address }) {
   const deposit = createDeposit({ nullifier: rbigint(31), secret: rbigint(31), votingId: getVotingId(votingId) })
   const note = toHex(deposit.preimage, 93)
   const noteString = `tornado-${votingId}-${netId}-${note}`
-  console.log(`Your note: ${noteString}`)
+  console.log(`Your ballot: ${noteString}`)
   console.log('Submitting deposit transaction')
-  await tornado.methods.getBallot(toHex(deposit.commitment), votingId).send({ from: senderAccount, gas: 2e6 })      .on('transactionHash', function (txHash) {
+  await tornado.methods.getBallot(toHex(deposit.commitment), votingId).send({ from: address ? address : senderAccount, gas: 2e6 })      .on('transactionHash', function (txHash) {
     if (netId === 1 || netId === 42) {
       console.log(`View transaction on etherscan https://${getCurrentNetworkName()}etherscan.io/tx/${txHash}`)
     } else {
@@ -143,7 +161,6 @@ async function generateMerkleProof(deposit) {
   // Get all deposit events from smart contract and assemble merkle tree from them
   console.log('Getting current state from tornado contract')
   const events = await tornado.getPastEvents('Ballot', { fromBlock: 0, toBlock: 'latest' })
-  console.log(events)
   
   const leaves = events
     .sort((a, b) => a.returnValues.leafIndex - b.returnValues.leafIndex) // Sort events in chronological order
@@ -204,7 +221,7 @@ async function generateProof({ deposit, votingId, relayerAddress = 0, fee = 0, r
   const args = [
     toHex(input.root),
     toHex(input.nullifierHash),
-    toHex(input.recipient, 20),
+    toHex(input.recipient, 31),
   ]
 
   return { proof, args }
@@ -215,7 +232,7 @@ async function generateProof({ deposit, votingId, relayerAddress = 0, fee = 0, r
  * @param noteString Note to withdraw
  * @param recipient Recipient address
  */
-async function sendVote({ deposit, votingId, relayerURL = null}) {
+async function sendVote({ deposit, votingId, optionNumber, address, relayerURL = null}) {
   if (relayerURL) {
     if (relayerURL.endsWith('.eth')) {
       throw new Error('ENS name resolving is not supported. Please provide DNS name of the relayer. See instuctions in README.md')
@@ -254,8 +271,8 @@ async function sendVote({ deposit, votingId, relayerURL = null}) {
     console.log("using private key", votingId)
     const { proof, args } = await generateProof({ deposit, votingId })
 
-    console.log('Submitting withdraw transaction')
-    await tornado.methods.vote(proof, ...args, 1).send({ from: senderAccount, gas: 1e6 })
+    console.log('Submitting withdraw transaction', optionNumber)
+    await tornado.methods.vote(proof, ...args, optionNumber).send({ from: address, gas: 1e6 })
       .on('transactionHash', function (txHash) {
         if (netId === 1 || netId === 42) {
           console.log(`View transaction on etherscan https://${getCurrentNetworkName()}etherscan.io/tx/${txHash}`)
@@ -428,20 +445,20 @@ function parseNote(noteString) {
   }
 
   const buf = Buffer.from(match.groups.note, 'hex')
-  console.log("Parsed buf", buf)
+  //console.log("Parsed buf", buf)
   const nullifier = bigInt.leBuff2int(buf.slice(0, 31))
   const secret = bigInt.leBuff2int(buf.slice(31, 62))
   const votingId = bigInt.leBuff2int(buf.slice(62, 93))
-  console.log("Parsed votingId", votingId, buf.slice(62, 93))
+  //console.log("Parsed votingId", votingId, buf.slice(62, 93))
   const deposit = createDeposit({ nullifier, secret, votingId })
   const netId = Number(match.groups.netId)
 
   return { netId, votingId, deposit }
 }
 
-async function loadDepositData({ deposit }) {
+async function loadBallotData({ deposit }) {
   try {
-    const eventWhenHappened = await tornado.getPastEvents('Deposit', {
+    const eventWhenHappened = await tornado.getPastEvents('Ballot', {
       filter: {
         commitment: deposit.commitmentHex
       },
@@ -459,13 +476,13 @@ async function loadDepositData({ deposit }) {
 
     return { timestamp, txHash, isSpent, from: receipt.from, commitment: deposit.commitmentHex }
   } catch (e) {
-    console.error('loadDepositData', e)
+    console.error('loadBallotData', e)
   }
   return {}
 }
-async function loadWithdrawalData({ amount, currency, deposit }) {
+async function loadVoteData({ deposit }) {
   try {
-    const events = await await tornado.getPastEvents('Withdrawal', {
+    const events = await await tornado.getPastEvents('Vote', {
       fromBlock: 0,
       toBlock: 'latest'
     })
@@ -474,22 +491,26 @@ async function loadWithdrawalData({ amount, currency, deposit }) {
       return event.returnValues.nullifierHash === deposit.nullifierHex
     })[0]
 
-    const fee = withdrawEvent.returnValues.fee
-    const decimals = config.deployments[`netId${netId}`][currency].decimals
-    const withdrawalAmount = toBN(fromDecimals({ amount, decimals })).sub(
-      toBN(fee)
-    )
+    if( withdrawEvent == null ) {
+      return null
+    }
+    const receipt = await web3.eth.getTransactionReceipt(withdrawEvent.transactionHash)
+
+    //const fee = withdrawEvent.returnValues.fee
+    //const decimals = config.deployments[`netId${netId}`][currency].decimals
+    const votingId = withdrawEvent.returnValues.votingId
     const { timestamp } = await web3.eth.getBlock(withdrawEvent.blockHash)
     return {
-      amount: toDecimals(withdrawalAmount, decimals, 9),
+      votingId : votingId,
+      //amount: toDecimals(withdrawalAmount, decimals, 9),
       txHash: withdrawEvent.transactionHash,
+      from: receipt.from,
       to: withdrawEvent.returnValues.to,
       timestamp,
       nullifier: deposit.nullifierHex,
-      fee: toDecimals(fee, decimals, 9)
     }
   } catch (e) {
-    console.error('loadWithdrawalData', e)
+    console.error('loadVoteData', e)
   }
 }
 
@@ -508,7 +529,6 @@ async function init({ rpc, noteNetId}) {
   TOKEN_AMOUNT = process.env.TOKEN_AMOUNT
   OWNER_PRIVATE_KEY = process.env.OWNER_PRIVATE_KEY
   if (OWNER_PRIVATE_KEY) {
-    console.log(OWNER_PRIVATE_KEY);
     const owner_account = web3.eth.accounts.privateKeyToAccount(OWNER_PRIVATE_KEY)
     web3.eth.accounts.wallet.add(OWNER_PRIVATE_KEY)
     //web3.eth.defaultAccount = owner_account.address
@@ -518,7 +538,6 @@ async function init({ rpc, noteNetId}) {
 
   PRIVATE_KEY = process.env.PRIVATE_KEY
   if (PRIVATE_KEY) {
-    console.log(PRIVATE_KEY);
     const account = web3.eth.accounts.privateKeyToAccount(PRIVATE_KEY)
     web3.eth.accounts.wallet.add(PRIVATE_KEY)
     web3.eth.defaultAccount = account.address
@@ -556,25 +575,48 @@ async function init({ rpc, noteNetId}) {
   voting = new web3.eth.Contract(votingContractJson.abi, votingAddress) 
 }
 
-async function main() {
-  if (inBrowser) {
-    const instance = { currency: 'eth', amount: '0.1' }
-    await init(instance)
-    window.deposit = async () => {
-      await deposit(instance)
-    }
-    window.withdraw = async () => {
-      const noteString = prompt('Enter the note to withdraw')
-      const recipient = (await web3.eth.getAccounts())[0]
+async function getActiveAddress(address) {
+  if( address == "new" ) {
+    const newAccount = await addNewAccount()
+    await topupAccount(ownerAccount, newAccount, web3.utils.toWei("0.1", "ether") );
+    return newAccount
+  }
+  if( address.length > 0 && address.length < 42 ){
+    return (await web3.eth.getAccounts())[parseInt(address)]
+  }
+  if( address.substring(0,2) == "0x"){
+    return address
+  }
+  const account = web3.eth.accounts.privateKeyToAccount(PRIVATE_KEY)
+  return account.address
+}
 
-      const { currency, amount, netId, deposit } = parseNote(noteString)
-      await init({ noteNetId: netId, currency, amount })
-      await withdraw({ deposit, currency, amount, recipient })
-    }
-  } else {
+async function addNewAccount(){
+  const newAccount = await web3.eth.accounts.create()
+  web3.eth.accounts.wallet.add(newAccount)
+  return newAccount.address;
+}
+
+async function topupAccount(from, to, value){
+  await web3.eth.sendTransaction({from: from ? from : ownerAccount, to, value, gas : 2e6 })
+}
+
+async function main() {
+
     program
       .option('-r, --rpc <URL>', 'The RPC, CLI should interact with', 'http://localhost:8545')
       .option('-R, --relayer <URL>', 'Withdraw via relayer')
+      .option('-A, --address <address>', 'Address in form of # or 0x')
+    program
+      .command('accounts')
+      .description('Display accounts information')
+      .action(async () => {
+        await init({ rpc: program.rpc})
+        await getAccounts()
+        console.log("Active address:",await getActiveAddress(program.address || "") )
+      })
+
+
     program
       .command('createVoting <optionsNumber> <nominationValue>')
       .description('Creates voting')
@@ -583,11 +625,13 @@ async function main() {
         await createVoting(optionsNumber, nominationValue )
       })
     program
-      .command('addVotes <votingId> <address> <votes>')
+      .command('addVotes <votingId> <votes>')
       .description('addVotes')
-      .action(async (votingId, address, votes) => {
+      .action(async (votingId, votes) => {
         await init({ rpc: program.rpc })
-        await addVotes( votingId, address, votes)
+        accountAddress = await getActiveAddress(program.address)
+        console.log("Using account ", accountAddress)
+        await addVotes( votingId, accountAddress, votes)
       })
     program
       .command('votingInfo <votingId>')
@@ -601,7 +645,8 @@ async function main() {
       .description('Submit a deposit of specified currency and amount from default eth account and return the resulting note. The currency is one of (ETH|DAI|cDAI|USDC|cUSDC|USDT). The amount depends on currency, see config.js file or visit https://tornado.cash.')
       .action(async (votingId) => {
         await init({ rpc: program.rpc })
-        await getBallot({ votingId : votingId })
+        accountAddress = await getActiveAddress(program.address)
+        await getBallot({ votingId : votingId, address : accountAddress })
       })
     program
       .command('setTornado')
@@ -612,12 +657,14 @@ async function main() {
       })
 
     program
-      .command('vote <note>')
+      .command('vote <note> <option>')
       .description('Withdraw a note to a recipient account using relayer or specified private key. You can exchange some of your deposit`s tokens to ETH during the withdrawal by specifing ETH_purchase (e.g. 0.01) to pay for gas in future transactions. Also see the --relayer option.')
-      .action(async (noteString, recipient, refund) => {
+      .action(async (noteString, option) => {
         const { netId, votingId, deposit } = parseNote(noteString)
         await init({ rpc: program.rpc, noteNetId: netId })
-        await sendVote({ deposit, votingId })
+        accountAddress = await getActiveAddress(program.address)
+        console.log("Using account ", accountAddress)
+        await sendVote({ deposit, votingId, optionNumber: option, address : accountAddress  })
       })
     program
       .command('balance <address> [token_address]')
@@ -635,27 +682,33 @@ async function main() {
       .action(async (noteString) => {
         const { currency, amount, netId, deposit } = parseNote(noteString)
         await init({ rpc: program.rpc, noteNetId: netId, currency, amount })
-        const depositInfo = await loadDepositData({ deposit })
+        const depositInfo = await loadBallotData({ deposit })
         const depositDate = new Date(depositInfo.timestamp * 1000)
-        console.log('\n=============Deposit=================')
+        console.log('\n=============Ballot==================')
         console.log('Deposit     :', amount, currency)
         console.log('Date        :', depositDate.toLocaleDateString(), depositDate.toLocaleTimeString())
-        console.log('From        :', `https://${getCurrentNetworkName()}etherscan.io/address/${depositInfo.from}`)
-        console.log('Transaction :', `https://${getCurrentNetworkName()}etherscan.io/tx/${depositInfo.txHash}`)
+        console.log('From        :', `${getCurrentNetworkName() ? "https://"+getCurrentNetworkName() + "etherscan.io/address/" + depositInfo.from : depositInfo.from}`)
+        console.log('Transaction :', `${getCurrentNetworkName() ? "https://"+getCurrentNetworkName() + "etherscan.io/tx/" + depositInfo.txHash : depositInfo.txHash}`)
         console.log('Commitment  :', depositInfo.commitment)
         if (deposit.isSpent) {
           console.log('The note was not spent')
         }
 
-        const withdrawInfo = await loadWithdrawalData({ amount, currency, deposit })
-        const withdrawalDate = new Date(withdrawInfo.timestamp * 1000)
-        console.log('\n=============Withdrawal==============')
-        console.log('Withdrawal  :', withdrawInfo.amount, currency)
-        console.log('Relayer Fee :', withdrawInfo.fee, currency)
-        console.log('Date        :', withdrawalDate.toLocaleDateString(), withdrawalDate.toLocaleTimeString())
-        console.log('To          :', `https://${getCurrentNetworkName()}etherscan.io/address/${withdrawInfo.to}`)
-        console.log('Transaction :', `https://${getCurrentNetworkName()}etherscan.io/tx/${withdrawInfo.txHash}`)
-        console.log('Nullifier   :', withdrawInfo.nullifier)
+        const withdrawInfo = await loadVoteData({ deposit })
+        console.log('\n=============Vote====================')
+        if( withdrawInfo != null ){
+          const withdrawalDate = new Date(withdrawInfo.timestamp * 1000)
+          console.log('VotingId    :', withdrawInfo.votingId)
+          console.log('Date        :', withdrawalDate.toLocaleDateString(), withdrawalDate.toLocaleTimeString())
+          console.log('From        :', `${getCurrentNetworkName() ? "https://" + getCurrentNetworkName() + "etherscan.io/address/" + withdrawInfo.from : withdrawInfo.from}`)
+          console.log('Transaction :', `${getCurrentNetworkName() ? "https://" + getCurrentNetworkName() +  "etherscan.io/tx/"+withdrawInfo.txHash : withdrawInfo.txHash}`)
+          console.log('Nullifier   :', withdrawInfo.nullifier)
+        } else{
+          console.log('Ballot is unspent')
+
+        }
+        console.log('\n=====================================')
+
       })
     program
       .command('test')
@@ -684,7 +737,7 @@ async function main() {
       console.log('Error:', e)
       process.exit(1)
     }
-  }
+  
 }
 
 main()
