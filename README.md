@@ -1,10 +1,12 @@
 # Tornado Vote Privacy Solution based on Tornado Cash
 
-Tornado Vote is a privacy voting solution based on outstanding Tornado Cash that utilize zkSNARKs. 
+Tornado Vote is a privacy voting solution based on outstanding [Tornado Cash](https://tornado.cash) that utilizes zkSNARKs. 
 
 ## Installation 
 
-Currently solution is designed for Ganache-cli local testnet. 
+Currently, solution is designed and tested for Ganache local testnet. 
+
+Do not forget to start ganache-cli.
 
 Deploy to local network:
 ```
@@ -23,19 +25,19 @@ Please copy .env.exampe to .env
 
 OWNER_PRIVATE_KEY is a private key for contract owner account. 
 
-PRIVATE_KEY is defautl privat ekey for user account
+PRIVATE_KEY is default private key for user account
 
 
 
 ### Options
--A \<address> address in form of ganache account number / ethereum address starting with 0x or "new" for new address. 0.1 ETH will be sent from OWNER address automatically. 
+-A \<address> address is ganache account number, ethereum address starting with 0x or word "new" for new address. 0.1 ETH will be sent to new account from OWNER address automatically. 
 
--r \<rpc> ethereum node host. "http://localhost:8545" is defualt value
+-r \<rpc> ethereum node host. "http://localhost:8545" is the defualt value
 
 
 ### Commands
 
-#### intitializtion
+#### Intitialization
 ```
 ./cli.js setTornado
 ```
@@ -59,7 +61,10 @@ Active address: 0x58727631C1D0363f638A63539f9c1fcaeb83b8fE
 
 ```
 
-#### votingInfo \<votingId> 
+#### votingInfo  
+
+./cli.js votingInfo \<votingId> 
+
 
 Displays voting information
 
@@ -68,12 +73,14 @@ Displays voting information
 
 ./cli.js createVoting \<optionsCounter> \<nomination> 
 
+Creates voting
+
 optionsCounter number of voting options
 
 nomination value of one ballot
 
 ```
-./cli.js -createVoting 3 1
+./cli.js createVoting 3 1
 Voting created. ID :  4
 ./cli.js votingInfo 4
 Getting voting info. ID :  4
@@ -92,15 +99,20 @@ Option 2 votes        : 0
 This sample create voting with three options, each ballot adds 1 vote to chosen option
 
 
-#### getVotes \<votingId>
+#### getVotes
+
+./cli.js getVotes \<votingId>
 
 Getting number of votes available for address
 
 
 
-#### addVotes
+#### addVotes 
 
-Add votes to specified address. Transaction is performed by voting owner
+./cli.js addVotes \<votingId> \<votesNumber>
+
+
+Add votes to specified address. Transaction is performed by OWNER
 
 ```
 ./cli.js -A 5 addVotes 4 10
@@ -128,10 +140,12 @@ Available votes 10
 This sample adds 10 votes to account #5
 
 
+#### ballot \<votingId>
 
-#### ballot <votingId>
+./cli.js ballot \<votingId>
 
-getBallot for votingId
+
+Converts votes to ballot 
 
 ```
 ./cli.js -A 5 ballot 4
@@ -183,9 +197,9 @@ Option 2 votes        : 1
 ====================================
 ```
 
-#### Compliance
+#### compliance
 
-compliance \<ballot>
+./cli.js compliance \<ballot>
 
 displays the ballot information 
 
@@ -219,7 +233,7 @@ Nullifier   : 0x002a01d05f87ffd7f42f7a462ff77a3089e764441934e525ccd22afd84003d1b
 
 [ ] Automatic withdrawal all available ballots through CLI
 
-[ ] Automatic randomly delayed voting for all available ballots through CLI
+[ ] Automatic, randomly delayed voting for all available ballots through CLI
 
 [ ] Proxy for gasless voting through third-party server
 
@@ -227,7 +241,7 @@ Nullifier   : 0x002a01d05f87ffd7f42f7a462ff77a3089e764441934e525ccd22afd84003d1b
 
 [ ] Front End 
 
-[ ] Contract for ERC-20 token based voting with freezing balances during voting period
+[ ] Contract for ERC-20 token based voting, with freezing balances during voting period
 
 [ ] Thiking of staking for frozen tokens
 
@@ -237,8 +251,9 @@ Nullifier   : 0x002a01d05f87ffd7f42f7a462ff77a3089e764441934e525ccd22afd84003d1b
 
 Special thanks to Roman Storm for awesome Tornado.cash!
 
-[Tornado.Cash](https://tornado.cash)
+[Tornado.Cash Website](https://tornado.cash)
 
 [Tornado.Cash Github](https://github.com/tornadocash) 
+
 
 
