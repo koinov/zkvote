@@ -88,7 +88,7 @@ async function setTornado() {
 async function createVoting(optionsNumber, nominationValue ) {
   votingId = await voting.methods.votingsCounter().call()
   await voting.methods.createVoting(optionsNumber, nominationValue).send({ from: senderAccount, gas: 2e6 })
-  console.log("Voting created. ID : ", votingId )
+  return votingId
 }
 
 /**
@@ -98,6 +98,9 @@ async function addVotes(votingId, address, votes ) {
   await voting.methods.addVotes(votingId, address, votes).send({ from: senderAccount, gas: 2e6 })
 }
 
+async function getVotes(votingId, address, votes ) {
+  return await voting.methods.getVotes(votingId, address).call()
+}
 
 
 /**
@@ -622,7 +625,9 @@ async function main() {
       .description('Creates voting')
       .action(async (optionsNumber, nominationValue) => {
         await init({ rpc: program.rpc })
-        await createVoting(optionsNumber, nominationValue )
+        const votingId = await createVoting(optionsNumber, nominationValue )
+        console.log("Voting created. ID : ", votingId )
+
       })
     program
       .command('addVotes <votingId> <votes>')
@@ -633,6 +638,17 @@ async function main() {
         console.log("Using account ", accountAddress)
         await addVotes( votingId, accountAddress, votes)
       })
+    program
+      .command('getVotes <votingId>')
+      .description('getVotes')
+      .action(async (votingId, votes) => {
+        await init({ rpc: program.rpc })
+        accountAddress = await getActiveAddress(program.address)
+        console.log("Using account ", accountAddress)
+        const votesNumber = await getVotes( votingId, accountAddress)
+        console.log("Available votes", votesNumber)
+      })
+
     program
       .command('votingInfo <votingId>')
       .description('Get voting info')

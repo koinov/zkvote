@@ -88,11 +88,15 @@ Option 0 votes        : 0
 Option 1 votes        : 0
 Option 2 votes        : 0
 ====================================
-
-
-
 ```
 This sample create voting with three options, each ballot adds 1 vote to chosen option
+
+
+#### getVotes \<votingId>
+
+Getting number of votes available for address
+
+
 
 #### addVotes
 
@@ -116,8 +120,13 @@ Option 1 votes        : 0
 Option 2 votes        : 0
 ====================================
 
+./cli.js -A 5 getVotes 4
+Using account  0x9db0A13ADDAB1A7492aC9Fb458eE61e9C50C95C6
+Available votes 10
+
 ```
 This sample adds 10 votes to account #5
+
 
 
 #### ballot <votingId>
@@ -129,6 +138,9 @@ getBallot for votingId
 Your ballot: tornado-4-1592692982076-0x6b3afc57725b0729801669e8fb609d27905af85b389e5bb587bb41991934a7cebbd978d076f9f091be46018c9a8017be2f1e5e283ad4386f810d13584a3904000000000000000000000000000000000000000000000000000000000000
 Submitting deposit transaction
 The transaction hash is 0x635993c940f986497bc44e5e2a1a92fccd44f3a2ce1fc9bc4dd9c3561034b30b
+./cli.js -A 5 getVotes 4
+Using account  0x9db0A13ADDAB1A7492aC9Fb458eE61e9C50C95C6
+Available votes 9
 ```
 
 Account #5 withdraws ballot that is: 
