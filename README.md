@@ -222,6 +222,13 @@ Nullifier   : 0x002a01d05f87ffd7f42f7a462ff77a3089e764441934e525ccd22afd84003d1b
 
 =====================================
 ```
+## Frontend
+
+
+![H](docs/home.png)
+
+![B](docs/ballot_info.png)
+
 
 
 ## TODO:
@@ -239,7 +246,7 @@ Nullifier   : 0x002a01d05f87ffd7f42f7a462ff77a3089e764441934e525ccd22afd84003d1b
 
 [ ] Ethereum faucet server for valid ballot owners. In mainnet you can always use [Tornado Cash](https://tornado.cash) to get clean Ethereum for voting gas. 
 
-[ ] Front End 
+[X] Front End (in progress) 
 
 [ ] Contract for ERC-20 token based voting, with freezing balances during voting period
 
