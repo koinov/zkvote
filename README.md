@@ -228,11 +228,15 @@ Nullifier   : 0x002a01d05f87ffd7f42f7a462ff77a3089e764441934e525ccd22afd84003d1b
 Frontend development is in progress and is available at Please visit [Frontend for ZK Vote](https://github.com/koinov/zkvote-front) for more details
 
 
+### Current votings list :
+
 ![Home](docs/home.png)
 
+### Voting information :
 
 ![Voting information](docs/voting.png)
 
+### Ballot information :
 
 ![Ballot information](docs/ballot_info.png)
 
